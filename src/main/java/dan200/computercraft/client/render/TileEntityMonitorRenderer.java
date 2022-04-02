@@ -27,9 +27,11 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import org.apache.logging.log4j.core.pattern.AbstractStyleNameConverter;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL31;
+import org.lwjgl.system.CallbackI;
 
 import javax.annotation.Nonnull;
 import java.nio.ByteBuffer;
@@ -125,7 +127,7 @@ public class TileEntityMonitorRenderer implements BlockEntityRenderer<TileMonito
             // We don't draw the cursor with the VBO, as it's dynamic and so we'll end up refreshing far more than is
             // reasonable.
             FixedWidthFontRenderer.drawCursor(
-                transform, renderer.getBuffer( RenderTypes.MONITOR ),
+                transform, renderer.getBuffer( RenderTypes.MONITOR_BACKGROUND),
                 0, 0, terminal, !originTerminal.isColour()
             );
 
@@ -134,7 +136,7 @@ public class TileEntityMonitorRenderer implements BlockEntityRenderer<TileMonito
         else
         {
             FixedWidthFontRenderer.drawEmptyTerminal(
-                transform, renderer.getBuffer( RenderTypes.MONITOR ),
+                transform, renderer.getBuffer( RenderTypes.MONITOR_BACKGROUND),
                 -MARGIN, MARGIN,
                 (float) (xSize + 2 * MARGIN), (float) -(ySize + MARGIN * 2), FULL_BRIGHT_LIGHTMAP
             );
@@ -206,28 +208,46 @@ public class TileEntityMonitorRenderer implements BlockEntityRenderer<TileMonito
 
             case VBO:
             {
-                VertexBuffer vbo = monitor.buffer;
+                VertexBuffer backgroundVbo = monitor.backgroundBuffer;
+                VertexBuffer foregroundVbo = monitor.foregroundBuffer;
                 if( redraw )
                 {
                     Tesselator tessellator = Tesselator.getInstance();
                     BufferBuilder builder = tessellator.getBuilder();
-                    builder.begin( RenderTypes.MONITOR.mode(), RenderTypes.MONITOR.format() );
 
-                    FixedWidthFontRenderer.drawTerminalWithoutCursor(
+                    // Build and upload background vbo
+                    builder.begin( RenderTypes.MONITOR_BACKGROUND.mode(), RenderTypes.MONITOR_BACKGROUND.format() );
+
+                    FixedWidthFontRenderer.drawTerminalBackground(
                         new PoseStack(), builder, 0, 0,
                         terminal, !monitor.isColour(), yMargin, yMargin, xMargin, xMargin, FULL_BRIGHT_LIGHTMAP
                     );
 
                     builder.end();
-                    vbo.upload( builder );
+                    backgroundVbo.upload( builder );
+
+                    // Build and upload foreground vbo
+                    builder.begin( RenderTypes.MONITOR_BACKGROUND.mode(), RenderTypes.MONITOR_BACKGROUND.format() );
+
+                    FixedWidthFontRenderer.drawTerminalCharacters(
+                        new PoseStack(), builder, 0, 0,
+                        terminal, !monitor.isColour(), xMargin, xMargin
+                    );
+
+                    builder.end();
+                    foregroundVbo.upload( builder );
                 }
 
                 Matrix3f popViewRotation = RenderSystem.getInverseViewRotationMatrix();
                 RenderSystem.setInverseViewRotationMatrix( IDENTITY );
 
-                RenderTypes.MONITOR.setupRenderState();
-                vbo.drawWithShader( transform.last().pose(), RenderSystem.getProjectionMatrix(), RenderTypes.getMonitorShader() );
-                RenderTypes.MONITOR.clearRenderState();
+                RenderTypes.MONITOR_BACKGROUND.setupRenderState();
+                backgroundVbo.drawWithShader( transform.last().pose(), RenderSystem.getProjectionMatrix(), RenderTypes.getMonitorShader() );
+                RenderTypes.MONITOR_BACKGROUND.clearRenderState();
+
+                RenderTypes.MONITOR_FOREGROUND.setupRenderState();
+                foregroundVbo.drawWithShader( transform.last().pose(), RenderSystem.getProjectionMatrix(), RenderTypes.getMonitorShader() );
+                RenderTypes.MONITOR_FOREGROUND.clearRenderState();
 
                 RenderSystem.setInverseViewRotationMatrix( popViewRotation );
 

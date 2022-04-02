@@ -23,7 +23,8 @@ public class RenderTypes
     public static final int FULL_BRIGHT_LIGHTMAP = (0xF << 4) | (0xF << 20);
 
     public static final RenderType MONITOR_TBO = Types.MONITOR_TBO;
-    public static final RenderType MONITOR = RenderType.textIntensity( FONT );
+    public static final RenderType MONITOR_BACKGROUND = RenderType.textIntensity( FONT );
+    public static final RenderType MONITOR_FOREGROUND = RenderType.textIntensityPolygonOffset( FONT );
 
     public static final RenderType ITEM_POCKET_TERMINAL = RenderType.textIntensity( FONT );
     public static final RenderType ITEM_POCKET_LIGHT = RenderType.textIntensity( FONT );

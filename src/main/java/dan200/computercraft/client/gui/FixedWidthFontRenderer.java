@@ -47,7 +47,7 @@ public final class FixedWidthFontRenderer
     public static final float BACKGROUND_START = (WIDTH - 6.0f) / WIDTH;
     public static final float BACKGROUND_END = (WIDTH - 4.0f) / WIDTH;
 
-    public static final float Z_EPSILON = 0.001f;
+    public static final float Z_EPSILON = 0.000f;
 
     private FixedWidthFontRenderer()
     {
@@ -183,7 +183,26 @@ public final class FixedWidthFontRenderer
 
     }
 
-    public static void drawTerminalWithoutCursor(
+    public static void drawTerminalCharacters(
+        @Nonnull PoseStack transform, @Nonnull VertexConsumer buffer, float x, float y,
+        @Nonnull Terminal terminal, boolean greyscale, float leftMarginSize, float rightMarginSize
+    )
+    {
+        Palette palette = terminal.getPalette();
+        int height = terminal.getHeight();
+
+        // The main text
+        for( int i = 0; i < height; i++ )
+        {
+            drawString(
+                transform, buffer, x, y + FixedWidthFontRenderer.FONT_HEIGHT * i,
+                terminal.getLine( i ), terminal.getTextColourLine( i ), null,
+                palette, greyscale, leftMarginSize, rightMarginSize, FULL_BRIGHT_LIGHTMAP
+            );
+        }
+    }
+
+    public static void drawTerminalBackground(
         @Nonnull PoseStack transform, @Nonnull VertexConsumer buffer, float x, float y,
         @Nonnull Terminal terminal, boolean greyscale,
         float topMarginSize, float bottomMarginSize, float leftMarginSize, float rightMarginSize, int light
@@ -205,15 +224,26 @@ public final class FixedWidthFontRenderer
             leftMarginSize, rightMarginSize, bottomMarginSize, light
         );
 
-        // The main text
+        // The main text background
         for( int i = 0; i < height; i++ )
         {
-            drawString(
-                transform, buffer, x, y + FixedWidthFontRenderer.FONT_HEIGHT * i,
-                terminal.getLine( i ), terminal.getTextColourLine( i ), terminal.getBackgroundColourLine( i ),
-                palette, greyscale, leftMarginSize, rightMarginSize, FULL_BRIGHT_LIGHTMAP
-            );
+            TextBuffer backgroundColor = terminal.getBackgroundColourLine( i );
+            if( backgroundColor != null )
+                drawBackground( transform, buffer, x, y + FixedWidthFontRenderer.FONT_HEIGHT * i,
+                    terminal.getBackgroundColourLine( i ), palette, greyscale, leftMarginSize, rightMarginSize,
+                    FONT_HEIGHT, light
+                );
         }
+    }
+
+    public static void drawTerminalWithoutCursor(
+        @Nonnull PoseStack transform, @Nonnull VertexConsumer buffer, float x, float y,
+        @Nonnull Terminal terminal, boolean greyscale,
+        float topMarginSize, float bottomMarginSize, float leftMarginSize, float rightMarginSize, int light
+    )
+    {
+        drawTerminalBackground( transform, buffer, x, y, terminal, greyscale, topMarginSize, bottomMarginSize, leftMarginSize, rightMarginSize, light);
+        drawTerminalCharacters( transform, buffer, x, y, terminal, greyscale, leftMarginSize, rightMarginSize);
     }
 
     public static void drawCursor(
